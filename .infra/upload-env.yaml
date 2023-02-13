@@ -1,0 +1,176 @@
+---
+- hosts: ctoker-broker-xch
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          CUR=xch\n
+          POSTGRES={{POSTGRES_BROKER}}\n
+          STOCK_HOLDER_ADDRESS={{XCH_STOCK_HOLDER_ADDRESS}}\n
+          KEY_STORAGE_PATH={{XCH_KEY_STORAGE_PATH}}\n
+          FULLNODE_URI={{XCH_FULLNODE_URI}}\n
+          SSL_CERT_PATH={{XCH_SSL_CERT_PATH}}\n
+          SSL_KEY_PATH={{XCH_SSL_KEY_PATH}}
+          "
+          >> .env
+
+- hosts: ctoker-broker-ach
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          CUR=ach\n
+          POSTGRES={{POSTGRES_BROKER}}\n
+          STOCK_HOLDER_ADDRESS={{ACH_STOCK_HOLDER_ADDRESS}}\n
+          KEY_STORAGE_PATH={{ACH_KEY_STORAGE_PATH}}\n
+          FULLNODE_URI={{ACH_FULLNODE_URI}}\n
+          SSL_CERT_PATH={{ACH_SSL_CERT_PATH}}\n
+          SSL_KEY_PATH={{ACH_SSL_KEY_PATH}}
+          "
+          >> .env
+
+- hosts: ctoker-broker-hdd
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          CUR=hdd\n
+          POSTGRES={{POSTGRES_BROKER}}\n
+          STOCK_HOLDER_ADDRESS={{HDD_STOCK_HOLDER_ADDRESS}}\n
+          KEY_STORAGE_PATH={{HDD_KEY_STORAGE_PATH}}\n
+          FULLNODE_URI={{HDD_FULLNODE_URI}}\n
+          SSL_CERT_PATH={{HDD_SSL_CERT_PATH}}\n
+          SSL_KEY_PATH={{HDD_SSL_KEY_PATH}}
+          "
+          >> .env
+
+- hosts: ctoker-broker-match-1
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          POSTGRES={{POSTGRES_BROKER}}\n
+          CUR1_STOCK_HOLDER_ADDRESS={{ACH_STOCK_HOLDER_ADDRESS}}\n
+          CUR2_STOCK_HOLDER_ADDRESS={{HDD_STOCK_HOLDER_ADDRESS}}
+          "
+          >> .env
+
+- hosts: ctoker-broker-match-2
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          POSTGRES={{POSTGRES_BROKER}}\n
+          CUR1_STOCK_HOLDER_ADDRESS={{XCH_STOCK_HOLDER_ADDRESS}}\n
+          CUR2_STOCK_HOLDER_ADDRESS={{ACH_STOCK_HOLDER_ADDRESS}}
+          "
+          >> .env
+
+- hosts: ctoker-aggr-xch
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          CUR=xch\n
+          POSTGRES={{POSTGRES_AGGR}}\n
+          FULLNODE_URI={{XCH_FULLNODE_URI}}\n
+          SSL_CERT_PATH={{XCH_SSL_CERT_PATH}}\n
+          SSL_KEY_PATH={{XCH_SSL_KEY_PATH}}\n
+          STOCK_CONFIG_ADDRESS={{XCH_STOCK_CONFIG_ADDRESS}}
+          "
+          >> .env
+
+- hosts: ctoker-aggr-ach
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          CUR=ach\n
+          POSTGRES={{POSTGRES_AGGR}}\n
+          FULLNODE_URI={{ACH_FULLNODE_URI}}\n
+          SSL_CERT_PATH={{ACH_SSL_CERT_PATH}}\n
+          SSL_KEY_PATH={{ACH_SSL_KEY_PATH}}
+          "
+          >> .env
+
+- hosts: ctoker-aggr-hdd
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          CUR=hdd\n
+          POSTGRES={{POSTGRES_AGGR}}\n
+          FULLNODE_URI={{HDD_FULLNODE_URI}}\n
+          SSL_CERT_PATH={{HDD_SSL_CERT_PATH}}\n
+          SSL_KEY_PATH={{HDD_SSL_KEY_PATH}}\n
+          STOCK_CONFIG_ADDRESS={{HDD_STOCK_CONFIG_ADDRESS}}
+          "
+          >> .env
+
+- hosts: ctoker-aggr-match-1, ctoker-aggr-match-2
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          POSTGRES={{POSTGRES_AGGR}}
+          "
+          >> .env
+
+- hosts: ctoker-web-api
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Create .env
+      shell:
+        chdir: /root/ctoker
+        cmd: >
+          rm -f /root/ctoker/.env &&
+          echo "
+          POSTGRES={{POSTGRES_AGGR}}
+          "
+          >> .env

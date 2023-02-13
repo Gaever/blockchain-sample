@@ -1,0 +1,224 @@
+import makeTransaction from '@/services/make-transaction';
+import coinCacheModel from '@ctocker/lib/build/main/src/models/coin-cache.model';
+import dealsModel from '@ctocker/lib/build/main/src/models/deals.model';
+import incomeModel from '@ctocker/lib/build/main/src/models/income.model';
+import ordersModel from '@ctocker/lib/build/main/src/models/orders.model';
+import outcomeModel from '@ctocker/lib/build/main/src/models/outcome.model';
+import FullNodeAdapter from '@ctocker/lib/build/main/src/services/blockchain/fullnode/fullnode-adapter';
+import BrokerCollect from '@ctocker/lib/build/main/src/services/broker/broker-collect';
+import BrokerMatch from '@ctocker/lib/build/main/src/services/broker/broker-match';
+import BrokerOutcomes from '@ctocker/lib/build/main/src/services/broker/broker-outcomes';
+import BrokerPayout from '@ctocker/lib/build/main/src/services/broker/broker-payout';
+import Stock from '@ctocker/lib/build/main/src/services/stock';
+import { waitForTransaction } from '@ctocker/lib/build/main/src/tests/helpers';
+import { TransactionRecord } from '@ctocker/lib/build/main/src/types/blockchain';
+import knex from '@ctocker/lib/build/main/src/utils/knex';
+import { assert } from 'chai';
+import Debug from 'debug';
+import _partition from 'lodash/partition';
+import schedule from 'node-schedule';
+import cases from './cases';
+import { getAmountState, resetAmountState, resetStockConfig, setLastKnownHeight, TCase, TestFlowStorage } from './helpers';
+
+const debug = Debug('ctocker:test');
+
+const storage: TestFlowStorage = {};
+
+let fullnodeCur1: FullNodeAdapter;
+let fullnodeCur2: FullNodeAdapter;
+
+let brokerCollect1: BrokerCollect;
+let brokerCollect2: BrokerCollect;
+let brokerMatch: BrokerMatch;
+let brokerOutcomes: BrokerOutcomes;
+let brokerPayout1: BrokerPayout;
+let brokerPayout2: BrokerPayout;
+
+let stockId;
+describe('broker:integration', async function () {
+  this.slow(1000 * 60 * 8);
+
+  cases.forEach(function (testCase) {
+    fullnodeCur1 = new FullNodeAdapter(testCase.enviroment.stockConfigRecord.cur1);
+    fullnodeCur2 = new FullNodeAdapter(testCase.enviroment.stockConfigRecord.cur2);
+
+    describe(testCase.title, function () {
+      this.beforeAll(async function () {
+        if (testCase.skip) {
+          this.skip();
+        } else {
+          await initService(testCase);
+        }
+      });
+
+      testFlow(testCase);
+    });
+  });
+});
+
+async function initService(testCase: TCase) {
+  brokerCollect1 = new BrokerCollect();
+  brokerPayout1 = new BrokerPayout();
+  brokerPayout1 = new BrokerPayout();
+  brokerMatch = new BrokerMatch();
+  brokerOutcomes = new BrokerOutcomes();
+
+  const cur1 = testCase.enviroment.stockConfigRecord.cur1;
+  const cur2 = testCase.enviroment.stockConfigRecord.cur1;
+
+  const _stockId = await resetStockConfig(testCase);
+  stockId = _stockId;
+
+  const exchangeConfig = { ...testCase.enviroment.stockConfigRecord.config_json.exchangeConfig, id: _stockId };
+
+  await brokerCollect1.init(cur1, [exchangeConfig]);
+  await brokerCollect2.init(cur2, [exchangeConfig]);
+  brokerMatch.init(exchangeConfig);
+  await brokerMatch.initialLoad();
+  brokerOutcomes.init(exchangeConfig);
+  await brokerPayout1.init(cur1, [exchangeConfig], testCase.enviroment.keyStorage);
+  await brokerPayout1.init(cur2, [exchangeConfig], testCase.enviroment.keyStorage);
+}
+
+function testFlow(testCase: TCase) {
+  const clients = testCase.in.clients;
+  const cur1 = testCase.enviroment.stockConfigRecord.cur1;
+  const cur2 = testCase.enviroment.stockConfigRecord.cur1;
+
+  it('reset amount on addresses', async function () {
+    await resetAmountState(testCase);
+    const state = await getAmountState(testCase);
+
+    debug('start amountState %O', state);
+
+    assert.deepEqual(state, testCase.in);
+  });
+
+  it('fill stock with transactions', async function () {
+    const height1 = (await fullnodeCur1.instance.getBlockchainState())?.blockchain_state?.peak?.height;
+    const height2 = (await fullnodeCur2.instance.getBlockchainState())?.blockchain_state?.peak?.height;
+
+    const [clientsToStock1, clientsToStock2] = _partition(clients, client => client.addressFrom.cur === cur1);
+
+    const txsToCur1Stock: TransactionRecord[] = [];
+    const txsToCur2Stock: TransactionRecord[] = [];
+
+    for (const client of clients) {
+      const tx = await makeTransaction({
+        tx_cur: client.addressFrom.cur,
+        tx_from: client.addressFrom.address,
+        tx_to: client.stockAddress,
+        tx_amount: client.orderAmount,
+        tx_pk: testCase.enviroment.keyStorage[client.addressFrom.address].pk,
+        tx_sk: testCase.enviroment.keyStorage[client.addressFrom.address].sk,
+        tx_bc_fee: client.addressFrom.transactionFee,
+      });
+
+      assert.ok(tx.payout_tx_id);
+
+      if (client.addressFrom.cur === cur1) {
+        txsToCur1Stock.push(tx);
+        await waitForTransaction(cur1, tx?.payout_tx_id);
+      }
+      if (client.addressFrom.cur === cur2) {
+        txsToCur2Stock.push(tx);
+        await waitForTransaction(cur2, tx?.payout_tx_id);
+      }
+    }
+
+    const stock1Amounts = await Promise.all(clientsToStock1.map(client => fullnodeCur1.instance.getSpendableAmountForAddress(client.stockAddress)));
+    const stock2Amounts = await Promise.all(clientsToStock2.map(client => fullnodeCur2.instance.getSpendableAmountForAddress(client.stockAddress)));
+
+    clientsToStock1.forEach((client, index) => {
+      assert.equal(stock1Amounts[index], client.orderAmount);
+    });
+    clientsToStock2.forEach((client, index) => {
+      assert.equal(stock2Amounts[index], client.orderAmount);
+    });
+
+    await setLastKnownHeight(cur1, height1);
+    await setLastKnownHeight(cur2, height2);
+
+    storage.inTxs = [...txsToCur1Stock.map(item => item.payout_tx_id), ...txsToCur2Stock.map(item => item.payout_tx_id)];
+  });
+
+  it('performs exchange', async function () {
+    await brokerCollect1.collectBlockchainTransactions();
+
+    const incomes = await knex(incomeModel.tableName).select('*').whereIn('tx_id', storage.inTxs);
+    assert.lengthOf(incomes, clients.length);
+    incomes.forEach(item => {
+      assert.include(storage.inTxs, item.tx_id);
+    });
+    const incomeIds = incomes.map(item => item.id);
+
+    const stock = new Stock();
+    stock.init({ ...testCase.enviroment.stockConfigRecord.config_json.exchangeConfig, id: stockId });
+    const [newOrders] = stock.incomesToOrders(incomes);
+    const match = stock.matchNewOrders(newOrders);
+    const [_order, newDeals] = match;
+
+    await new Promise(async (resolve, reject) => {
+      const timeout = 1000 * 60 * 10;
+      const start = new Date();
+
+      const job = schedule.scheduleJob('*/5 * * * * *', async function () {
+        await brokerCollect1.collectBlockchainTransactions();
+        await brokerCollect1.releaseExpiredFrozenCoins();
+        await brokerCollect2.collectBlockchainTransactions();
+        await brokerCollect2.releaseExpiredFrozenCoins();
+        await brokerMatch.match();
+        await brokerMatch.expireStaleOrders();
+        await brokerOutcomes.dealsToOutcomes();
+        await brokerOutcomes.processExpiredOrders();
+        await brokerPayout1.payoutOutcomes();
+        await brokerPayout2.payoutOutcomes();
+
+        const orders = (await knex(ordersModel.tableName).select('*').whereIn('income_id', incomeIds)).map(ordersModel.rowToEntity);
+        const ordersIds = orders?.map?.(item => item.id);
+        const deals = (await knex(dealsModel.tableName).select('*').whereIn('order1_id', ordersIds).orWhereIn('order2_id', ordersIds)).map(
+          dealsModel.rowToEntity,
+        );
+        const dealsIds = deals?.map?.(item => item.id);
+        const outcomes = (await knex(outcomeModel.tableName).select('*').whereIn('deal_id', dealsIds).orWhereIn('order_id', ordersIds)).map(
+          outcomeModel.rowToEntity,
+        );
+        const coinCacheRows = await knex(coinCacheModel.tableName).select('*');
+
+        const defaultLoopExitCondition = () => {
+          if (newDeals.length === dealsIds.length) {
+            if (
+              ((newDeals.length > 0 && outcomes?.length > 0 && !outcomes.find(item => item.status !== 'done')) || newDeals.length === 0) &&
+              coinCacheRows?.length === 0
+            ) {
+              return true;
+            }
+          }
+
+          return false;
+        };
+
+        if (testCase.loopExitCondition) {
+          if (testCase.loopExitCondition({ orders, coinCacheRows, outcomes, deals })) {
+            job.cancel();
+            resolve(true);
+          }
+        } else if (defaultLoopExitCondition()) {
+          job.cancel();
+          resolve(true);
+        }
+
+        if (new Date().getTime() - start.getTime() >= timeout) {
+          job.cancel();
+          reject('stock tasks incomplete in reasonable time');
+        }
+      });
+      job.invoke();
+    });
+  });
+
+  it('validates expectations', async function () {
+    const resultAmountState = await getAmountState(testCase);
+    assert.deepEqual(resultAmountState, testCase.out);
+  });
+}

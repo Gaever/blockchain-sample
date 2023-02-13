@@ -1,0 +1,111 @@
+import CtocksCollect from '@/services/ctocks-collect';
+import CtocksMatch from '@/services/ctocks-match';
+import { clearCtocksDb, seedStock } from '@/utils/helpers';
+import curSeriesModel from '@ctocker/lib/build/main/src/models/cur-series.model';
+import dealsModel from '@ctocker/lib/build/main/src/models/deals.model';
+import incomeModel from '@ctocker/lib/build/main/src/models/income.model';
+import orderModel from '@ctocker/lib/build/main/src/models/orders.model';
+import stockConfigModel from '@ctocker/lib/build/main/src/models/stock-config.model';
+import knex from '@ctocker/lib/build/main/src/utils/knex';
+import { assert } from 'chai';
+import Debug from 'debug';
+import testCase3, { stockConfigRecord } from './cases/func.3-flow';
+import { ids, omitFields } from './helpers';
+
+// @ts-ignore
+const debug = Debug('ctocker:test');
+
+let ctocksCollect1: CtocksCollect;
+let ctocksCollect2: CtocksCollect;
+let ctocksMatch: CtocksMatch;
+let stockId;
+
+describe('ctocks:CtocksCollect functional', function () {
+  this.slow(30000);
+
+  this.afterAll(async function () {
+    await knex.transaction(async trx => {
+      await clearCtocksDb(trx);
+    });
+  });
+
+  this.beforeAll(async function () {
+    await knex.transaction(async trx => {
+      await clearCtocksDb(trx);
+      await seedStock(trx, stockConfigRecord);
+    });
+
+    stockId = (await stockConfigModel.getConfigs()).map(item => item.id)[0];
+    const exchangeConfig = { ...stockConfigRecord.config_json.exchangeConfig, id: stockId };
+
+    ctocksCollect1 = new CtocksCollect();
+    ctocksCollect2 = new CtocksCollect();
+    ctocksMatch = new CtocksMatch();
+
+    ctocksCollect1.init(exchangeConfig.cur1, [exchangeConfig]);
+    ctocksCollect2.init(exchangeConfig.cur2, [exchangeConfig]);
+    ctocksMatch.init(exchangeConfig);
+  });
+
+  async function getData() {
+    const incomes = await knex(incomeModel.tableName)
+      .select('*')
+      .whereIn(
+        'tx_id',
+        testCase3._out.incomes.map(item => item.tx_id),
+      );
+    const orders = await knex(orderModel.tableName).select('*').whereIn('income_id', ids(incomes));
+    const deals = await knex(dealsModel.tableName)
+      .select('*')
+      .whereIn('order1_id', ids(orders))
+      .orWhereIn(
+        'order2_id',
+        orders.map(item => item.id),
+      );
+    const curSeries = (await knex(curSeriesModel.tableName(stockId, '1min')).select('*'))?.map?.(curSeriesModel.rowToEntity);
+
+    return { incomes, orders, deals, curSeries };
+  }
+
+  it('create income', async function () {
+    await knex.transaction(async trx => {
+      await ctocksCollect1.saveIncomes(
+        testCase3._in.inTxs.map(item => ({ ...item, stock_id: stockId })).filter(item => item.cur === stockConfigRecord.cur1),
+        trx,
+      );
+      await ctocksCollect1.saveIncomes(
+        testCase3._in.inTxs.map(item => ({ ...item, stock_id: stockId })).filter(item => item.cur === stockConfigRecord.cur2),
+        trx,
+      );
+    });
+  });
+
+  it('create entities', async function () {
+    await ctocksMatch.match();
+    assert.lengthOf(ctocksMatch.stock[stockId].config.top, 1);
+    await new Promise(resolve => setTimeout(resolve, 12000));
+    await ctocksMatch.match();
+    await ctocksMatch.expireStaleOrders();
+  });
+
+  it('validates', async function () {
+    const { incomes, orders, deals, curSeries } = await getData();
+
+    const actual = {
+      incomes: omitFields(incomes),
+      orders: omitFields(orders),
+      deals: omitFields(deals),
+      curSeries: omitFields(curSeries),
+    };
+    const expected = testCase3._out;
+
+    assert.sameDeepMembers(actual.incomes, expected.incomes);
+    assert.sameDeepMembers(actual.orders, expected.orders);
+    assert.sameDeepMembers(actual.deals, expected.deals);
+    assert.sameDeepMembers(actual.curSeries, expected.curSeries);
+
+    assert.sameDeepMembers(ctocksMatch.stock[stockId].config.top, []);
+    assert.sameDeepMembers(ctocksMatch.stock[stockId].config.bottom, []);
+    assert.sameDeepMembers(ctocksMatch.stock[stockId].config.newOrders, []);
+  });
+});

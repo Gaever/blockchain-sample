@@ -1,0 +1,12 @@
+---
+- hosts: broker_collectors_and_payouts,aggr_collectors,broker_match,aggr_match,aggr_web_api
+  gather_facts: no
+  remote_user: root
+  vars:
+    node_bin_path: PATH="/root/.nvm/versions/node/v16.13.1/bin:$PATH"
+  tasks:
+    - name: Stop via pm2
+      ignore_errors: yes
+      shell:
+        cmd: "{{node_bin_path}} pm2 stop all && {{node_bin_path}} pm2 delete all"
+        chdir: /root/ctoker

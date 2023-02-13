@@ -1,0 +1,107 @@
+// organize-imports-ignore
+require('dotenv').config({ path: '.test.env' });
+import stockConfigModel from '@ctocker/lib/build/main/src/models/stock-config.model';
+import knex from '@ctocker/lib/build/main/src/utils/knex';
+import testCase1 from './cases/func.1-having-no-config';
+import testCase2 from './cases/func.2-having-config';
+import CtocksCollect from '@/services/ctocks-collect';
+import { StockConfigRecord } from '@ctocker/lib/build/main/src/types/stock';
+import { assert } from 'chai';
+import blockchainManager from '@ctocker/lib/build/main/src/services/blockchain/blockchain-manager';
+import http, { Server } from 'http';
+import Debug from 'debug';
+import { clearCtocksDb } from '@/utils/helpers';
+
+// @ts-ignore
+const debug = Debug('ctocker:test');
+
+describe('ctocks:CtocksCollect add new config', function () {
+  async function clearDb() {
+    await knex.transaction(async trx => {
+      await clearCtocksDb(trx);
+    });
+  }
+
+  this.afterAll(async function () {
+    await clearDb();
+  });
+
+  describe('save new stock config', function () {
+    let serverInstance: Server;
+
+    this.slow(500);
+
+    this.beforeAll(function (done) {
+      serverInstance = http
+        .createServer(function (request, response) {
+          response.writeHead(200, { 'Content-Type': 'application/json' });
+          if (request.url === '/test-config1') {
+            response.end(JSON.stringify(testCase1._out.stockConfigRecord.config_json));
+          } else if (request.url === '/test-config2') {
+            response.end(JSON.stringify(testCase2._out.second.config_json));
+          } else {
+            response.end();
+          }
+        })
+        .listen(8000);
+      serverInstance.on('listening', function () {
+        done();
+      });
+    });
+
+    this.afterAll(function () {
+      serverInstance.close();
+    });
+
+    describe('having no configs on startup', function () {
+      const ctocksCollect = new CtocksCollect();
+      const storage: { newStocks?: StockConfigRecord[] } = {};
+
+      this.beforeAll(async function () {
+        blockchainManager.curToBlockchain = {};
+        await clearDb();
+      });
+
+      it('add new stock', async function () {
+        ctocksCollect.init('xch', []);
+        await knex(stockConfigModel.tableName).insert(testCase1._in);
+        const newStocks = await ctocksCollect.processNewConfigs();
+        storage.newStocks = newStocks;
+
+        assert.lengthOf(Object.keys(ctocksCollect.stocks), 0);
+        assert.lengthOf(Object.keys(blockchainManager.curToBlockchain), 1);
+      });
+    });
+
+    describe('having configs on startup', function () {
+      const ctocksCollect = new CtocksCollect();
+      const storage: { newStocks?: StockConfigRecord[] } = {};
+
+      async function resetDb() {
+        await clearDb();
+        await knex(stockConfigModel.tableName).insert(testCase2._in);
+      }
+
+      describe('with same cur', function () {
+        this.beforeAll(async function () {
+          blockchainManager.curToBlockchain = {};
+          await resetDb();
+        });
+
+        it('add new stock', async function () {
+          const existGlassConfigs = (await knex(stockConfigModel.tableName).select('*'))
+            .map(stockConfigModel.rowToEntity)
+            .map(item => ({ ...item.config_json.exchangeConfig, id: item.id }));
+          ctocksCollect.init('xch', existGlassConfigs);
+
+          await knex(stockConfigModel.tableName).insert(testCase2._out.second);
+          const newStocks = await ctocksCollect.processNewConfigs();
+          storage.newStocks = newStocks;
+
+          assert.lengthOf(Object.keys(ctocksCollect.stocks), 1);
+          assert.lengthOf(Object.keys(blockchainManager.curToBlockchain), 1);
+        });
+      });
+    });
+  });
+});

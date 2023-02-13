@@ -1,0 +1,33 @@
+{
+	"folders": [
+		{
+			"name": "✨ ctocker",
+			"path": "."
+		},
+		{
+			"name": "💸 @ctocker/broker",
+			"path": "packages/broker"
+		},
+		{
+			"name": "🔦 @ctocker/ctocks",
+			"path": "packages/ctocks"
+		},
+		{
+			"name": "📦 @ctocker/lib",
+			"path": "packages/lib"
+		},
+		{
+			"name": "🖥 @ctocker/web-api",
+			"path": "packages/web-api"
+		},
+		{
+			"name": "🖥 @ctocker/web-cra",
+			"path": "packages/web-cra"
+		},
+		{
+			"name": "🤾🏻‍♂️@ctocker/player",
+			"path": "packages/player"
+		}
+	],
+	"settings": {}
+}

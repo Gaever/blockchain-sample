@@ -1,0 +1,18 @@
+---
+- hosts: broker_collectors_and_payouts,aggr_collectors,broker_match,aggr_match,aggr_web_api
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: Install required system packages
+      apt: name=rsync state=latest
+    - name: Upload src
+      synchronize:
+        src: "{{playbook_dir}}/../"
+        dest: "/root/ctoker/"
+        delete: no
+        use_ssh_args: yes
+    - name: Upload process.config.js
+      synchronize:
+        src: "{{playbook_dir}}/processes/process.{{inventory_hostname}}.config.js"
+        dest: "/root/ctoker/process.config.js"
+        use_ssh_args: yes

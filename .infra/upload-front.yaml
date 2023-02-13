@@ -1,0 +1,20 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Build front local
+      shell:
+        cmd: yarn build:front
+        chdir: "{{playbook_dir}}/../"
+
+- hosts: front
+  gather_facts: no
+  remote_user: user
+  become: true
+  tasks:
+    - name: Upload
+      synchronize:
+        src: "{{playbook_dir}}/../packages/web-cra/build/"
+        dest: "/var/www/ctoker.08z.ru/"
+        use_ssh_args: yes
+        delete: yes

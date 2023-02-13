@@ -1,0 +1,55 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "lib": [
+      "es2020",
+      "esnext.asynciterable",
+      "DOM"
+    ],
+    "incremental": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "pretty": true,
+    "composite": true,
+    "allowJs": true,
+    "noEmit": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "importHelpers": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "traceResolution": false,
+    "listEmittedFiles": false,
+    "listFiles": false,
+    "sourceMap": true,
+    "rootDir": "./"
+  },
+  "references": [
+    {
+      "path": "./packages/lib"
+    },
+    {
+      "path": "./packages/broker"
+    },
+    {
+      "path": "./packages/ctocks"
+    },
+    {
+      "path": "./packages/web-api"
+    },
+    {
+      "path": "./packages/web-cra"
+    },
+    {
+      "path": "./packages/player"
+    }
+  ],
+  "exclude": [
+    "node_modules/**"
+  ]
+}

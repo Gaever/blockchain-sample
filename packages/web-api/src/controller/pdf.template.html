@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title }}</title>
+  <style>
+    html {
+      font-size: 10px;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    table tr:nth-child(2n+1) {
+      background-color: whitesmoke;
+    }
+    table tr:nth-child(2n) {
+      background-color:snow;
+    }
+    table td, table tr, table {
+      border-collapse: collapse;
+    }
+    td {
+      padding: 0.3rem;
+    }
+
+    pre {
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    pre tr td:last-of-type {
+      width: 50%;
+      text-align: right;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: bold;
+    }
+
+    .cur-table {
+      width: 100%;
+    }
+
+
+
+    .cur-table td {
+      text-align: right;
+    }
+    .cur-table td:last-child {
+      text-align: left;
+      padding-left: 1rem;
+    }
+    .cur-table td:first-child {
+      width: 100%;
+      text-align: left;
+    }
+
+  </style>
+</head>
+
+<body>
+  <h1>{{title}}</h1>
+  <h2>{{cur1}} / {{cur2}}</h2>
+
+  <h2>{{cur1}}</h2>
+  <table class="cur-table">
+    <tr>
+      <td>Match fee</td>
+      <td>{{cur1Fees.takerFee}}</td>
+      <td>{{cur1Fees.takerFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Payout fee</td>
+      <td>{{cur1Fees.makerFee}}</td>
+      <td>{{cur1Fees.makerFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Refund fee</td>
+      <td>{{cur1Fees.refundFee}}</td>
+      <td>{{cur1Fees.refundFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Blockchain fee</td>
+      <td>{{cur1Fees.transactionFee}}</td>
+      <td>{{cur1Fees.transactionFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Order lifetime</td>
+      <td>{{cur1OrderLifetimeMs}}</td>
+      <td>ms</td>
+    </tr>
+    <tr>
+      <td>Min. order amount</td>
+      <td>{{minOrderAmount1}}</td>
+      <td>{{cur1}}</td>
+    </tr>
+  </table>
+
+  <h2>{{cur2}}</h2>
+  <table class="cur-table">
+    <tr>
+      <td>Match fee</td>
+      <td>{{cur2Fees.takerFee}}</td>
+      <td>{{cur2Fees.takerFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Payout fee:</td>
+      <td>{{cur2Fees.makerFee}}</td>
+      <td>{{cur2Fees.makerFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Refund fee</td>
+      <td>{{cur2Fees.refundFee}}</td>
+      <td>{{cur2Fees.refundFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Blockchain fee:</td>
+      <td>{{cur2Fees.transactionFee}}</td>
+      <td>{{cur2Fees.transactionFeeKind}}</td>
+    </tr>
+    <tr>
+      <td>Order lifetime</td>
+      <td>{{cur2OrderLifetimeMs}}</td>
+      <td>ms</td>
+    </tr>
+    <tr>
+      <td>Min. order amount</td>
+      <td>{{minOrderAmount2}}</td>
+      <td>{{cur2}}</td>
+    </tr>
+  </table>
+
+  <h2>{{cur1}} address to price</h2>
+  <pre>
+    <table>
+      {{#each cur1Addresses}}
+        <tr>
+          <td>{{lookup this 0}}</td>
+          <td>{{lookup this 1}}</td>
+        </tr>
+      {{/each}}
+    </table>
+  </pre>
+  <p style="page-break-after: always;"></p>
+
+  <h2>{{cur2}} address to price</h2>
+  <pre>
+    <table>
+      {{#each cur2Addresses}}
+        <tr>
+          <td>{{lookup this 0}}</td>
+          <td>{{lookup this 1}}</td>
+        </tr>
+      {{/each}}
+    </table>
+  </pre>
+</body>
+
+</html>

@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "./",
+    "baseUrl": "./src",
+    "outDir": "./build/main",
+    "paths": {
+      "@/*": [
+        "*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.json",
+    "src/utils/puzzle-hash.js"
+  ],
+  "compileOnSave": false
+}

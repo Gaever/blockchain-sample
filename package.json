@@ -1,0 +1,58 @@
+{
+  "name": "ctocker",
+  "version": "0.0.1",
+  "license": "ISC",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "pm2 start process.config.js",
+    "start-web-mock": "pm2 start process.mock.config.js",
+    "start-debug": "LOG_LEVEL=debug pm2 start process.config.js",
+    "test-tx-ach": "yarn workspace @ctocker/broker start --tx-cur ach --tx-from ach1fq43d60pgq6ug253nk7v7npx3d2c0anr8zrxwxhn43pwacts94hss7xfna --tx-to ach1tllx266jeqz625alqj2dldntmperpzpgd2jeqgfntf2u2vk2xqfq6j0nt2 --tx-amount 10 --tx-sk 0fb33728fd2b545130b525cc6886f3cacd3dc122676ab12f9e013c5b5a1d9948 --tx-pk 9837f5e0f56ef3f49a48fcb3da20634f7ace17dd7b8b07f81116dc5a414d6fd08c9392e5a7c3b64f5a5634a14a38308a",
+    "test-tx-hdd": "yarn workspace @ctocker/broker start --tx-cur hdd --tx-from hdd1fq43d60pgq6ug253nk7v7npx3d2c0anr8zrxwxhn43pwacts94hshd0gh0 --tx-to hdd1cn82gvksvq36h0lqy9k0t6jth4qukghp4djzsn9ymyfk2qs8df7s6cp0zl --tx-amount 10000 --tx-sk 0fb33728fd2b545130b525cc6886f3cacd3dc122676ab12f9e013c5b5a1d9948 --tx-pk 9837f5e0f56ef3f49a48fcb3da20634f7ace17dd7b8b07f81116dc5a414d6fd08c9392e5a7c3b64f5a5634a14a38308a",
+    "stop": "pm2 stop all",
+    "build": "yarn build:services && yarn build:front",
+    "build:services": "yarn workspace @ctocker/lib build && yarn workspace @ctocker/broker build && yarn workspace @ctocker/ctocks build && yarn workspace @ctocker/web-api build",
+    "build:front": "yarn workspace @ctocker/web-cra build",
+    "test:unit": "export LOG_LEVEL=silent && yarn workspace @ctocker/lib test:unit && yarn workspace @ctocker/broker test:unit && yarn workspace @ctocker/ctocks test:unit && yarn workspace @ctocker/web-api test:unit",
+    "test:func": "export LOG_LEVEL=silent && yarn workspace @ctocker/lib test:func && yarn workspace @ctocker/broker test:func && yarn workspace @ctocker/ctocks test:func",
+    "test:integ": "export LOG_LEVEL=silent && yarn workspace @ctocker/lib test:integ && yarn workspace @ctocker/broker test:integ && yarn workspace @ctocker/ctocks test:integ",
+    "test-tx": "yarn workspace @ctocker/broker test-tx",
+    "show:broker-ids": "yarn workspace @ctocker/broker start --config-show",
+    "show:ctocks-ids": "yarn workspace @ctocker/ctocks start --config-show",
+    "dev:web": "yarn workspace @ctocker/web-cra start",
+    "dev:seed:ctocks:local:light": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocks yarn workspace @ctocker/ctocks seed --specific=light.seed.ts",
+    "dev:seed:ctocks:local:heavy": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocks yarn workspace @ctocker/ctocks seed --specific=heavy.seed.ts",
+    "dev:seed:broker:local:light": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocker_broker yarn workspace @ctocker/broker seed --specific=light.seed.ts",
+    "dev:seed:broker:local:heavy": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocker_broker yarn workspace @ctocker/broker seed --specific=heavy.seed.ts",
+    "dev:seed:ctocks:heavy": "yarn workspace @ctocker/ctocks seed --specific=heavy.seed.ts",
+    "dev:seed:broker:heavy": "yarn workspace @ctocker/broker seed --specific=heavy.seed.ts",
+    "dev:unmigrate:broker": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocker_broker yarn workspace @ctocker/broker unmigrate",
+    "dev:unmigrate:ctocks": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocks yarn workspace @ctocker/ctocks unmigrate",
+    "dev:migrate:broker": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocker_broker yarn workspace @ctocker/broker migrate",
+    "dev:migrate:ctocks": "POSTGRES=postgres://ctocker:password@localhost:15432/ctocks yarn workspace @ctocker/ctocks migrate",
+    "deploy:services": "yarn deploy:upload && yarn deploy:build && yarn deploy:start",
+    "deploy:upload": "ansible-playbook -i .infra/hosts .infra/upload.yaml",
+    "deploy:upload-front": "ansible-playbook -i .infra/hosts .infra/upload-front.yaml",
+    "deploy:build": "ansible-playbook -i .infra/hosts .infra/build.yaml",
+    "deploy:start": "ansible-playbook -i .infra/hosts .infra/stop.yaml && ansible-playbook -i .infra/hosts .infra/upload-env.yaml && ansible-playbook -i .infra/hosts .infra/start.yaml",
+    "deploy:stop": "ansible-playbook -i .infra/hosts .infra/stop.yaml",
+    "deploy:env": "ansible-playbook -i .infra/hosts .infra/upload-env.yaml",
+    "deploy:unmigrate": "ansible-playbook -i .infra/hosts .infra/unmigrate.yaml",
+    "deploy:migrate": "ansible-playbook -i .infra/hosts .infra/migrate.yaml",
+    "deploy:seed": "ansible-playbook -i .infra/hosts .infra/seed.yaml",
+    "report": "yarn workspace @ctocker/lib report"
+  },
+  "devDependencies": {
+    "@types/knex": "^0.16.1",
+    "knex": "^0.95.14",
+    "pm2": "^5.1.2",
+    "typescript": "^4.5.3"
+  },
+  "dependencies": {
+    "argparse": "^2.0.1",
+    "dotenv": "^10.0.0"
+  }
+}

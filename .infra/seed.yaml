@@ -1,0 +1,22 @@
+---
+- hosts: ctoker-broker-xch
+  gather_facts: no
+  remote_user: root
+  vars:
+    node_bin_path: PATH="/root/.nvm/versions/node/v16.13.1/bin:$PATH"
+  tasks:
+    - name: Seed broker config
+      shell:
+        cmd: "{{node_bin_path}} yarn dev:seed:broker:heavy"
+        chdir: /root/ctoker
+
+- hosts: ctoker-aggr-xch
+  gather_facts: no
+  remote_user: root
+  vars:
+    node_bin_path: PATH="/root/.nvm/versions/node/v16.13.1/bin:$PATH"
+  tasks:
+    - name: Seed ctocks config
+      shell:
+        cmd: "{{node_bin_path}} yarn dev:seed:ctocks:heavy"
+        chdir: /root/ctoker

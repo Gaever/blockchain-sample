@@ -1,0 +1,17 @@
+- .infra
+- .git
+- .vscode
+- .env
+- node_modules
+- dist
+- build
+- log
+- logs
+- deploy.sh
+- process.*
+- port-forward.sh
+- .rsync-filter
+- .DS_Store
+- .gitignore
+- workspace.code-workspace
+- packages/player
